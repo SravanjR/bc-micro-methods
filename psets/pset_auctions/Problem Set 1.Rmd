@@ -2,9 +2,11 @@
 title: "Problem Set 1"
 author: "Sravan Ramawamy"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
+
+https://github.com/SravanjR/bc-micro-methods/blob/main/psets/pset_auctions/Problem-Set-1.pdf
 
 ```{r setup, include=TRUE}
 #Load Libraries 

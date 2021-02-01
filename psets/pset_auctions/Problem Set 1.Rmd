@@ -1,0 +1,137 @@
+---
+title: "Problem Set 1"
+author: "Sravan Ramawamy"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=TRUE}
+#Load Libraries 
+library(MASS)
+library(ggplot2)
+library(evd)
+```
+
+```{r setupcont, include=TRUE}
+#Load Bid Data
+DataDir = paste(getwd(), "/bids1.csv",sep = "")
+Data = read.csv(DataDir, header = FALSE)
+bids = Data[,1]
+
+```
+
+
+## Question 1: Estimate Density of Bids
+
+### Normal Distribution
+
+```{r Q1, include=TRUE}
+
+Normpdf = dnorm(bids, mean = mean(bids), sd = sd(bids))
+Normpdf
+
+```
+
+### Gaussian Kernel
+
+```{r gauss}
+
+n = length(bids)
+iq = IQR(bids)
+iq
+bw_plugin = .9*min(sd(bids),iq/1.34)*n^(-1/5)
+bw_plugin
+gk  <- density(bids,bw=bw_plugin, kernel = c("gaussian"))
+gk
+BAR1 <- with(gk, approxfun(x = x, y = y))
+gDensity <- BAR1(bids)
+gDensity
+
+```
+
+### Epanechikov Kernel
+
+```{r epanechikov}
+
+ek <- density(bids,bw=bw_plugin, kernel = c("epanechnikov"))
+ek
+BAR2 <- with(ek, approxfun(x = x, y = y))
+eDensity1 <- BAR2(bids)
+eDensity1
+
+```
+
+## Question 2: Least-Squares cross-validation for epanechikov kernel
+
+
+```{r}
+set.seed(1)
+ek2 <- density(bids,bw="ucv", kernel = c("epanechnikov"))
+ek2
+BAR3 <- with(ek2, approxfun(x = x, y = y))
+eDensity2 <- BAR3(bids)
+eDensity2
+```
+
+## Question 3: Plot of Estimated Density Functions over Bid Histogram
+
+```{r Q3}
+
+data <- as.data.frame(bids)
+
+ggplot(data,aes(bids))  + geom_histogram(aes(y = stat(density)), bins = 50) +
+  geom_line(stat="density",bw=bw_plugin, col = 'red') + 
+  geom_line(stat="density", bw=bw_plugin,lwd = 1, col = 'Orange', kernel = c("epanechnikov")) +
+  geom_line(stat="density", bw="ucv",lwd = 1, col = 'blue', kernel = c("epanechnikov")) +
+    stat_function(fun = dnorm, args = list(mean = mean(bids), sd = sd(bids)))
+
+```
+
+While the tails are somewhat similar, the the density function consisting of the epanechnikov and the plug-in estimate appear to fit the data best. This line is given by the orange curve above.
+
+## Question 4: GPV and the cross-validated Epanechnikov kernel to recover the valuation implied for each bid
+
+```{r}
+BAR <- with(ek2, approxfun(x = x, y = y))
+eDensity <- BAR(bids)
+
+#Calculate CDF Values
+f<- approxfun(ek2$x, ek2$y, yleft=0, yright=0)
+
+cdf <- vector()
+for(i in 1:length(bids)){
+    temp <- integrate(f, lower = -Inf, bids[i])
+    cdf[i] <- temp$value
+}
+
+value <- bids + cdf/(2*eDensity)
+value
+```
+
+## Question 5: Estimate the Distribution of Value using another Epanechikov Kernel using the Plug-in Bandwidth
+
+```{r}
+n = length(value)
+iq = IQR(value)
+bw_plugin = .9*min(sd(value),iq/1.34)*n^(-1/5)
+valDist  <- density(value,bw=bw_plugin, kernel = c("epanechnikov"))
+valDist
+```
+
+## Question 6: Guess the Distribution that the Valuations were generated with
+
+```{r}
+m1 <- dgev(value, 2.25, 1.2, 0)
+
+data2 <- as.data.frame(value)
+
+ggplot(data,aes(value))  + geom_histogram(aes(y = stat(density)), bins = 50) +
+geom_line(stat="density", bw=bw_plugin,lwd = 1, col = 'Orange', kernel = c("epanechnikov")) +
+geom_line(aes(y = m1))
+```
+
+The Valuations seem to have been generated from a Generalized Extreme Value distribution. The Location parameter is around 2.25, the scale parameter is around 1.2 and the shape parameter is about 0 which suggests that the distribution of bidding valuations is specifically a Gumbel/Type 1 Extreme value Distribution.
+
+
+

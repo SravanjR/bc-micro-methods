@@ -1,0 +1,69 @@
+---
+title: "Problem Set 2"
+author: "Sravan Ramaswamy"
+date: "2/7/2021"
+output: pdf_document
+---
+
+```{r setup, include=TRUE}
+#Clear Environment 
+rm(list = ls())
+
+#Load Libraries 
+library(MASS)
+library(ggplot2)
+library(evd)
+library(dplyr)
+library(binsreg)
+```
+
+```{r setupcont, include=TRUE}
+#Load Bid Data
+DataDir = paste(getwd(), "/nodelmp.csv",sep = "")
+Data = read.csv(DataDir)
+
+```
+
+
+## Question 1
+
+Make a binner scatter plot of the relationship between the maximum price each day
+and the temperature. Does the relationship look linear?
+
+
+```{r Q1, include=TRUE}
+#Obtain the Maximum Price each day and the corresponding temperature
+Temp_Maximum_df<-Data%>%group_by(year, month, day)%>%slice(which.max(lmp))
+
+#Make a binned scatterplot of the relationship
+lmp <- Temp_Maximum_df$lmp
+temperature <- Temp_Maximum_df$temp
+
+binsreg(lmp,temperature)
+
+```
+Based on the binned scatterplot, the relationship between the maximum price per day and the temperature does not appear to be linear.
+
+
+## Question 2: 
+
+Predict the relationship using a polynomial in temperature, for polynomials varying
+from degree p = 1 to p = 10 Which fits best in sample?
+
+
+```{r}
+#fit1 <- lm( lmp~temperature )
+#fit2 <- lm( lmp~poly(temperature,2) )
+#fit3 <- lm( lmp~poly(temperature,3) )
+#fit4 <- lm( lmp~poly(temperature,4) )
+#fit5 <- lm( lmp~poly(temperature,5) )
+#fit6 <- lm( lmp~poly(temperature,6) )
+#fit7 <- lm( lmp~poly(temperature,7) )
+#fit8 <- lm( lmp~poly(temperature,8) )
+#fit9 <- lm( lmp~poly(temperature,9) )
+#fit10 <- lm( lmp~poly(temperature,10) )
+
+binsreg(lmp,temperature, line = c(2, 0))
+
+```
+

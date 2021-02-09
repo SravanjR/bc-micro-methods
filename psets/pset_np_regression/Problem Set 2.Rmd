@@ -3,10 +3,12 @@ title: "Problem Set 2"
 author: "Sravan Ramaswamy"
 date: "2/7/2021"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
+
+https://github.com/SravanjR/bc-micro-methods/blob/main/psets/pset_np_regression/Problem-Set-2.pdf
 
 ```{r setup, include=TRUE}
 #Clear Environment 

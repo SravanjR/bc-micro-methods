@@ -1,0 +1,213 @@
+---
+title: "Problem Set 3"
+author: "Sravan Ramaswamy"
+date: "2/11/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=TRUE, message=FALSE}
+#Clear Environment 
+rm(list = ls())
+
+library(caTools)
+library(glmnet)
+library(dplyr)
+ library(tidyverse)
+ library(ISLR) 
+```
+
+```{r setupcont, include=TRUE, message=FALSE}
+#Load Bid Data
+DataDir = paste(getwd(), "/boston_cl.csv",sep = "")
+Data = read.csv(DataDir,sep = ",")
+
+```
+
+```{r, message=FALSE}
+
+set.seed(255)
+sample = sample.split(Data$X, SplitRatio = .8)
+Data = Data[2:15]
+trainData = subset(Data, sample == TRUE)
+testData  = subset(Data, sample == FALSE)
+
+```
+
+## Question 1
+
+How correlated are these variables?
+
+```{r}
+res <- cor(Data)
+round(res, 2)
+```
+In general, we can see a large amount of correlation between some variables such as between "age" and "nox" or between "tax" and "rad" which may limit their explanatory power in a regression.
+
+
+## Question 2
+
+Estimate the original HR model using the training data.
+Project the the log(Median House Price) onto all of the other variables. Everything should enter linearly, except for
+NOx and RM, which should only enter quadratically.
+
+```{r, message=FALSE}
+
+# Linear Projection 
+
+lm1 <- lm(log(medv) ~ crim + zn + indus + chas + poly(nox,2) + poly(rm,2) + age + dis + rad + tax + ptratio + black + lstat, data = trainData)
+
+```
+
+## Question 3
+
+Now estimate the model using LASSO. Use k=10 fold cross validation to select lambda. Select the model with the largest lambda (penalty) such that the MSE is within one standard error of the minimum MSE.
+
+```{r, message=FALSE}
+x_train = model.matrix(log(medv) ~ crim + zn + indus + chas + poly(nox,2) + poly(rm,2) + age + dis + rad + tax + ptratio + black + lstat, trainData)[,-1]
+
+x_test = model.matrix(log(medv) ~ crim + zn + indus + chas + poly(nox,2) + poly(rm,2) + age + dis + rad + tax + ptratio + black + lstat, testData)[,-1]
+
+y_train = trainData %>% 
+  select(medv) %>% 
+  unlist() %>% 
+  as.numeric()
+
+y_train <- log(y_train)
+
+y_test = testData %>%
+  select(medv) %>%
+  unlist() %>%
+  as.numeric()
+
+y_test <- log(y_test)
+```
+
+
+```{r, message=FALSE}
+
+lasso_mod = cv.glmnet(x_train, 
+                   y_train, 
+                   alpha = 1, nfolds = 10) # Fit lasso model on training data
+
+plot(lasso_mod)
+
+print(paste("MSE with the largest lambda within one standard error or the minimizing lambda: ", lasso_mod$cvm[lasso_mod$lambda == lasso_mod$lambda.1se]))  # 1-SE rule
+
+print(paste("Log lambda for this MSE:",log(lasso_mod$lambda.1se))) # Log lambda for this MSE
+
+print(paste("Number of Coefficients: ",lasso_mod$nzero[lasso_mod$lambda == lasso_mod$lambda.1se] )) # No. of coef | 1-SE MSE
+
+```
+
+
+## Question 4
+
+Do the same thing for ridge regression. Select the model with the largest lambda (penalty) such that the MSE is within one standard error of the minimum MSE.
+
+```{r, message=FALSE}
+ridge_mod = cv.glmnet(x_train, 
+                   y_train, 
+                   alpha = 0, nfolds = 10) # Fit ridge model on training data
+plot(ridge_mod)
+
+print(paste("MSE with the largest lambda within one standard error or the minimizing lambda: ", ridge_mod$cvm[ridge_mod$lambda == ridge_mod$lambda.1se]))  # 1-SE rule
+
+print(paste("Log lambda for this MSE:",log(ridge_mod$lambda.1se))) # Log lambda for this MSE
+
+print(paste("Number of Coefficients: ",ridge_mod$nzero[ridge_mod$lambda == ridge_mod$lambda.1se]))
+ # No. of coef | 1-SE MSE
+```
+
+## Question 5
+
+HR’s decision to have only NOx and RM enter quadractically seems sort of arbitrary. Expand the data to contain the square term of all variables. Then run Lasso on this expanded data set. Which coefficients survive now?
+
+```{r}
+
+x_train2 = model.matrix(log(medv) ~ poly(crim,2) + poly(zn,2) + poly(indus,2) + chas + poly(nox,2) + poly(rm,2) + poly(age,2) + poly(dis,2) + poly(rad,2) + poly(tax,2) + poly(ptratio,2) + poly(black,2) + poly(lstat,2), trainData)[,-1]
+
+x_test2 = model.matrix(log(medv) ~ poly(crim,2) + poly(zn,2) + poly(indus,2) + chas + poly(nox,2) + poly(rm,2) + poly(age,2) + poly(dis,2) + poly(rad,2) + poly(tax,2) + poly(ptratio,2) + poly(black,2) + poly(lstat,2), testData)[,-1]
+
+y_train2 = trainData %>% 
+  select(medv) %>% 
+  unlist() %>% 
+  as.numeric()
+
+y_train2 <- log(y_train)
+
+y_test2 = testData %>%
+  select(medv) %>%
+  unlist() %>%
+  as.numeric()
+
+y_test2 <- log(y_test)
+```
+
+
+```{r}
+
+lasso_mod2 = cv.glmnet(x_train2, 
+                   y_train2, 
+                   alpha = 1, nfolds = 10) # Fit lasso model on training data
+
+plot(lasso_mod2)
+
+print(paste("MSE with the largest lambda within one standard error or the minimizing lambda: ", lasso_mod2$cvm[lasso_mod2$lambda == lasso_mod2$lambda.1se]))  # 1-SE rule
+
+print(paste("Log lambda for this MSE:",log(lasso_mod2$lambda.1se))) # Log lambda for this MSE
+
+print(paste("Number of Coefficients: ",lasso_mod2$nzero[lasso_mod2$lambda == lasso_mod2$lambda.1se] ))
+ # No. of coef | 1-SE MSE
+
+
+tmp_coeffs <- coef(lasso_mod2)
+data.frame(name = tmp_coeffs@Dimnames[[1]][tmp_coeffs@i + 1], coefficient = tmp_coeffs@x)
+
+```
+The surviving coefficients are crim, chas, rm, rm^2, dis, dis^2, tax^2, ptratio. black, black^2 and lstat.
+
+## Question 6
+
+Report the internal MSE and test data MSE for HR’s original model; Lasso and Ridge on the original covariates; and Lasso on the full set of second order terms. Which one fits best?
+
+```{r}
+
+## HR Original Model
+
+# Internal
+print(paste("HR Original Model Internal MSE: ",mean(lm1$residuals^2)))
+
+# Test MSE
+print(paste("HR Original Model Test MSE: ",mean((log(testData$medv) - predict.lm(lm1, testData))^2)))
+
+##Internal MSE: Ridge
+print(paste("Ridge Model Internal MSE: ",ridge_mod$cvm[ridge_mod$lambda == ridge_mod$lambda.1se]
+))
+
+##Test MSE: Ridge
+ridge_pred = predict(ridge_mod, s =  ridge_mod$lambda.1se,  newx = x_test)
+print(paste("Ridge Model Test MSE: ",mean((ridge_pred - y_test)^2)))
+
+##Internal MSE: Lasso
+print(paste("LASSO Model Internal MSE: ",lasso_mod$cvm[lasso_mod$lambda == lasso_mod$lambda.1se]))
+
+##Test MSE: Lasso
+lasso_pred = predict(lasso_mod, s =  lasso_mod$lambda.1se, newx = x_test)
+
+print(paste("LASSO Model Test MSE: ",mean((lasso_pred - y_test)^2)))
+
+##Internal MSE: Lasso Second Order
+print(paste("LASSO Model Second Order Internal MSE: ",lasso_mod2$cvm[lasso_mod2$lambda == lasso_mod2$lambda.1se]))
+
+##Test MSE: Lasso Second Order
+lasso_pred2 = predict(lasso_mod2, s =  lasso_mod2$lambda.1se ,newx = x_test2)
+
+print(paste("LASSO Model Second Order Test MSE: ",mean((lasso_pred2 - y_test2)^2)))
+
+
+```
+The best fitting model is the LASSO Model with second order terms according to the test MSE values as well as according to the internal training MSE values.
+
+

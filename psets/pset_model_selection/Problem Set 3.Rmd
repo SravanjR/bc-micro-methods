@@ -3,9 +3,11 @@ title: "Problem Set 3"
 author: "Sravan Ramaswamy"
 date: "2/11/2021"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
+
+https://github.com/SravanjR/bc-micro-methods/blob/main/psets/pset_model_selection/Problem-Set-3.pdf
 
 ```{r setup, include=TRUE, message=FALSE}
 #Clear Environment 
